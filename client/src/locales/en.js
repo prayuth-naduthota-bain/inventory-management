@@ -6,6 +6,7 @@ export default {
     orders: 'Orders',
     finance: 'Finance',
     demandForecast: 'Demand Forecast',
+    restocking: 'Restocking',
     companyName: 'Catalyst Components',
     subtitle: 'Inventory Management System'
   },
@@ -112,6 +113,16 @@ export default {
     onTimeDelivery: 'On-Time Delivery',
     itemsCount: '{count} items',
     quantity: 'Qty',
+    submittedOrders: {
+      title: 'Submitted Orders',
+      noOrders: 'No submitted orders for internal restocking',
+      leadTime: 'Lead Time',
+      numItems: '# Items',
+      arrivingInDays: 'Arriving in {days} days',
+      overdueDays: 'Overdue by {days} days',
+      arrivingToday: 'Arriving today',
+      invalidDate: 'Invalid date'
+    },
     table: {
       orderNumber: 'Order Number',
       orderId: 'Order ID',
@@ -186,6 +197,41 @@ export default {
       trend: 'Trend',
       period: 'Period'
     }
+  },
+
+  // Restocking
+  restocking: {
+    title: 'Restocking Recommendations',
+    description: 'Optimize inventory purchases based on budget and demand',
+    budgetSlider: 'Budget',
+    budgetLabel: 'Set Budget: {budget}',
+    recommendations: 'Recommendations',
+    noRecommendations: 'No restocking recommendations available. Try increasing your budget or adjusting filters.',
+    table: {
+      sku: 'SKU',
+      itemName: 'Item Name',
+      quantity: 'Quantity to Order',
+      unitCost: 'Unit Cost',
+      totalCost: 'Total Cost',
+      reason: 'Reason',
+      select: 'Select'
+    },
+    reasons: {
+      backlog: 'Backlog',
+      highDemand: 'High Demand'
+    },
+    summary: {
+      totalItems: 'Total Items',
+      totalCost: 'Total Cost',
+      remainingBudget: 'Remaining Budget',
+      selectedItems: 'Selected Items'
+    },
+    placeOrder: 'Place Restocking Order',
+    success: 'Restocking order created successfully!',
+    error: 'Failed to create restocking order',
+    deliveryEstimate: 'Expected delivery: {min}-{max} days',
+    selectAll: 'Select All',
+    deselectAll: 'Deselect All'
   },
 
   // Filters
