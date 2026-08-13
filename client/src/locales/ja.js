@@ -112,6 +112,16 @@ export default {
     onTimeDelivery: '定時配達',
     itemsCount: '{count}件',
     quantity: '数量',
+    submittedOrders: {
+      title: '発注済み注文',
+      noOrders: '社内在庫補充の発注済み注文はありません',
+      leadTime: 'リードタイム',
+      numItems: '品目数',
+      arrivingInDays: '{days}日後に到着',
+      overdueDays: '{days}日遅延',
+      arrivingToday: '本日到着',
+      invalidDate: '無効な日付'
+    },
     table: {
       orderNumber: '注文番号',
       orderId: '注文ID',

@@ -2,6 +2,8 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Optional
 from pydantic import BaseModel
+from datetime import datetime, timedelta
+import random
 from mock_data import inventory_items, orders, demand_forecasts, backlog_items, spending_summary, monthly_spending, category_spending, recent_transactions, purchase_orders
 
 app = FastAPI(title="Factory Inventory Management System")
@@ -119,6 +121,20 @@ class CreatePurchaseOrderRequest(BaseModel):
     unit_cost: float
     expected_delivery_date: str
     notes: Optional[str] = None
+
+# Restocking order models
+class RestockingOrderItem(BaseModel):
+    sku: str
+    name: str
+    quantity: int
+    unit_cost: float
+    reason: str
+
+class CreateRestockingOrderRequest(BaseModel):
+    items: List[RestockingOrderItem]
+    total_cost: float
+    warehouse: Optional[str] = None
+    category: Optional[str] = None
 
 # API endpoints
 @app.get("/")
@@ -303,6 +319,54 @@ def get_monthly_trends():
     result = list(months.values())
     result.sort(key=lambda x: x['month'])
     return result
+
+@app.post("/api/restocking-orders", response_model=Order)
+def create_restocking_order(request: CreateRestockingOrderRequest):
+    """Create a new restocking order from the Restocking tab
+
+    This endpoint creates a new order with "Processing" status and adds it to the orders list.
+    The order will appear in the Orders tab with delivery lead time of 7-14 days.
+    """
+    # Generate unique order ID and number
+    order_id = f"ORD-{len(orders) + 1:04d}"
+    order_number = f"REST-{datetime.now().strftime('%Y%m%d')}-{random.randint(1000, 9999)}"
+
+    # Calculate delivery date (7-14 days from now)
+    today = datetime.now()
+    lead_days = random.randint(7, 14)
+    expected_delivery = (today + timedelta(days=lead_days)).strftime('%Y-%m-%d')
+
+    # Format items for order
+    order_items = [
+        {
+            "sku": item.sku,
+            "name": item.name,
+            "quantity": item.quantity,
+            "unit_cost": item.unit_cost,
+            "total": item.quantity * item.unit_cost
+        }
+        for item in request.items
+    ]
+
+    # Create new order
+    new_order = {
+        "id": order_id,
+        "order_number": order_number,
+        "customer": "Internal Restocking",  # Mark as internal restocking order
+        "items": order_items,
+        "status": "Processing",
+        "order_date": today.strftime('%Y-%m-%d'),
+        "expected_delivery": expected_delivery,
+        "total_value": request.total_cost,
+        "actual_delivery": None,
+        "warehouse": request.warehouse or "all",
+        "category": request.category or "all"
+    }
+
+    # Add to orders list (in-memory)
+    orders.append(new_order)
+
+    return new_order
 
 if __name__ == "__main__":
     import uvicorn

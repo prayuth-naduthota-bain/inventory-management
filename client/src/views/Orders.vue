@@ -8,6 +8,50 @@
     <div v-if="loading" class="loading">{{ t('common.loading') }}</div>
     <div v-else-if="error" class="error">{{ error }}</div>
     <div v-else>
+      <!-- Submitted Orders Section -->
+      <div class="card submitted-orders-section">
+        <div class="card-header">
+          <h3 class="card-title">{{ t('orders.submittedOrders.title') }} ({{ submittedOrders.length }})</h3>
+        </div>
+        <div v-if="submittedOrders.length === 0" class="no-data">
+          {{ t('orders.submittedOrders.noOrders') }}
+        </div>
+        <div v-else class="table-container">
+          <table class="orders-table">
+            <thead>
+              <tr>
+                <th class="col-order-number">{{ t('orders.table.orderNumber') }}</th>
+                <th class="col-date">{{ t('orders.table.orderDate') }}</th>
+                <th class="col-date">{{ t('orders.table.expectedDelivery') }}</th>
+                <th class="col-lead-time">{{ t('orders.submittedOrders.leadTime') }}</th>
+                <th class="col-value">{{ t('orders.table.totalValue') }}</th>
+                <th class="col-items-count">{{ t('orders.submittedOrders.numItems') }}</th>
+                <th class="col-status">{{ t('orders.table.status') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="order in submittedOrders" :key="order.id">
+                <td class="col-order-number"><strong>{{ order.order_number }}</strong></td>
+                <td class="col-date">{{ formatDate(order.order_date) }}</td>
+                <td class="col-date">{{ formatDate(order.expected_delivery) }}</td>
+                <td class="col-lead-time">
+                  <span :class="['lead-time-badge', getLeadTimeClass(order.expected_delivery)]">
+                    {{ getLeadTimeText(order.expected_delivery) }}
+                  </span>
+                </td>
+                <td class="col-value"><strong>{{ currencySymbol }}{{ order.total_value.toLocaleString() }}</strong></td>
+                <td class="col-items-count">{{ order.items.length }}</td>
+                <td class="col-status">
+                  <span :class="['badge', getOrderStatusClass(order.status)]">
+                    {{ t(`status.${order.status.toLowerCase()}`) }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <div class="stats-grid">
         <div class="stat-card success">
           <div class="stat-label">{{ t('status.delivered') }}</div>
@@ -129,6 +173,69 @@ export default {
       loadOrders()
     })
 
+    // Computed property to filter submitted orders (Internal Restocking)
+    const submittedOrders = computed(() => {
+      return orders.value.filter(order => order.customer === 'Internal Restocking')
+    })
+
+    /**
+     * Calculate lead time for an order based on expected delivery date
+     * Returns object with days (positive = future, negative = overdue) and text
+     */
+    const calculateLeadTime = (expectedDeliveryDate) => {
+      const deliveryDate = new Date(expectedDeliveryDate)
+
+      // Validate date
+      if (isNaN(deliveryDate.getTime())) {
+        return { days: 0, isValid: false }
+      }
+
+      const today = new Date()
+      today.setHours(0, 0, 0, 0) // Reset to start of day for accurate comparison
+      deliveryDate.setHours(0, 0, 0, 0)
+
+      // Calculate difference in milliseconds and convert to days
+      const diffTime = deliveryDate - today
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+
+      return { days: diffDays, isValid: true }
+    }
+
+    /**
+     * Get human-readable text for lead time
+     * "Arriving in X days" for future dates
+     * "Overdue by X days" for past dates
+     * "Arriving today" for today
+     */
+    const getLeadTimeText = (expectedDeliveryDate) => {
+      const { days, isValid } = calculateLeadTime(expectedDeliveryDate)
+
+      if (!isValid) return t('orders.submittedOrders.invalidDate')
+
+      if (days > 0) {
+        return t('orders.submittedOrders.arrivingInDays', { days })
+      } else if (days < 0) {
+        return t('orders.submittedOrders.overdueDays', { days: Math.abs(days) })
+      } else {
+        return t('orders.submittedOrders.arrivingToday')
+      }
+    }
+
+    /**
+     * Get CSS class for lead time badge
+     * Red for overdue, yellow for arriving soon, green for future
+     */
+    const getLeadTimeClass = (expectedDeliveryDate) => {
+      const { days, isValid } = calculateLeadTime(expectedDeliveryDate)
+
+      if (!isValid) return 'neutral'
+
+      if (days < 0) return 'overdue' // Past due - red
+      if (days === 0) return 'today' // Today - yellow
+      if (days <= 3) return 'soon' // 1-3 days - yellow
+      return 'future' // 4+ days - green
+    }
+
     const getOrdersByStatus = (status) => {
       return orders.value.filter(order => order.status === status)
     }
@@ -160,8 +267,11 @@ export default {
       loading,
       error,
       orders,
+      submittedOrders,
       getOrdersByStatus,
       getOrderStatusClass,
+      getLeadTimeText,
+      getLeadTimeClass,
       formatDate,
       currencySymbol,
       translateProductName,
@@ -172,6 +282,53 @@ export default {
 </script>
 
 <style scoped>
+/* Submitted Orders Section */
+.submitted-orders-section {
+  margin-bottom: 2rem;
+}
+
+.no-data {
+  padding: 2rem;
+  text-align: center;
+  color: #64748b;
+  font-style: italic;
+}
+
+/* Lead Time Badge Styling */
+.lead-time-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.lead-time-badge.overdue {
+  background-color: #fee2e2;
+  color: #dc2626;
+}
+
+.lead-time-badge.today {
+  background-color: #fef3c7;
+  color: #d97706;
+}
+
+.lead-time-badge.soon {
+  background-color: #fef3c7;
+  color: #d97706;
+}
+
+.lead-time-badge.future {
+  background-color: #dcfce7;
+  color: #16a34a;
+}
+
+.lead-time-badge.neutral {
+  background-color: #f1f5f9;
+  color: #64748b;
+}
+
 /* Fixed table layout to prevent column shifting */
 .orders-table {
   table-layout: fixed;
@@ -201,6 +358,15 @@ export default {
 
 .col-value {
   width: 120px;
+}
+
+.col-lead-time {
+  width: 150px;
+}
+
+.col-items-count {
+  width: 100px;
+  text-align: center;
 }
 
 /* Items details styling */
